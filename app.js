@@ -169,11 +169,13 @@ const SEGMENT_COLORS = [
 const STORAGE_KEYS = {
   TOPICS: "speakwheel_topics_v1",
   HISTORY: "speakwheel_history_v1",
-  SOUND: "speakwheel_sound_v1"
+  SOUND: "speakwheel_sound_v1",
+  EXCLUDED: "speakwheel_excluded_v1"
 };
 
 // State aplikasi
 let activeTopics = [];
+let excludedTopicTexts = new Set();
 let historyItems = [];
 let soundEnabled = true;
 let currentAngle = 0; // radian
@@ -215,6 +217,7 @@ const newTopicInput = document.getElementById("newTopicInput");
 const topicList = document.getElementById("topicList");
 const topicCountBadge = document.getElementById("topicCountBadge");
 const shuffleListBtn = document.getElementById("shuffleListBtn");
+const restoreBankBtn = document.getElementById("restoreBankBtn");
 const clearListBtn = document.getElementById("clearListBtn");
 const removeAfterSpinToggle = document.getElementById("removeAfterSpinToggle");
 const keywordChallengeToggle = document.getElementById("keywordChallengeToggle");
@@ -411,14 +414,16 @@ function saveState() {
   localStorage.setItem(STORAGE_KEYS.TOPICS, JSON.stringify(activeTopics));
   localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(historyItems));
   localStorage.setItem(STORAGE_KEYS.SOUND, JSON.stringify(soundEnabled));
+  localStorage.setItem(STORAGE_KEYS.EXCLUDED, JSON.stringify([...excludedTopicTexts]));
 }
 
 function loadRandomTopicsFromBank() {
   const cat = categorySelect.value;
   const count = parseInt(wheelSizeSelect.value, 10) || 8;
-  const pool = cat === "all"
+  const basePool = cat === "all"
     ? TOPIC_BANK
     : TOPIC_BANK.filter((item) => item.category === cat);
+  const pool = basePool.filter((item) => !excludedTopicTexts.has(item.text));
 
   activeTopics = shuffleArray(pool).slice(0, Math.min(count, pool.length));
   saveState();
@@ -461,9 +466,13 @@ function drawWheel() {
 
     // Segmen
     ctx.beginPath();
-    ctx.moveTo(center, center);
-    ctx.arc(center, center, radius, startAngle, endAngle);
-    ctx.closePath();
+    if (activeTopics.length === 1) {
+      ctx.arc(center, center, radius, 0, Math.PI * 2);
+    } else {
+      ctx.moveTo(center, center);
+      ctx.arc(center, center, radius, startAngle, endAngle);
+      ctx.closePath();
+    }
     ctx.fillStyle = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
     ctx.fill();
 
@@ -541,7 +550,8 @@ function renderTopicList() {
       delBtn.textContent = "✕";
       delBtn.addEventListener("click", () => {
         if (isSpinning) return;
-        activeTopics.splice(idx, 1);
+        const [removed] = activeTopics.splice(idx, 1);
+        if (removed) excludedTopicTexts.add(removed.text);
         saveState();
         renderAll();
       });
@@ -552,7 +562,13 @@ function renderTopicList() {
     });
   }
 
-  const canSpin = activeTopics.length >= 2 && !isSpinning;
+  if (excludedTopicTexts.size > 0) {
+    restoreBankBtn.classList.remove("hidden");
+  } else {
+    restoreBankBtn.classList.add("hidden");
+  }
+
+  const canSpin = activeTopics.length >= 1 && !isSpinning;
   spinBtn.disabled = !canSpin;
   centerSpinBtn.disabled = !canSpin;
 }
@@ -611,7 +627,7 @@ function getWinnerIndex(angle, count) {
 }
 
 function spinWheel() {
-  if (isSpinning || activeTopics.length < 2) return;
+  if (isSpinning || activeTopics.length < 1) return;
 
   wheelTooltip.classList.add("hidden");
   isSpinning = true;
@@ -677,7 +693,8 @@ function onSpinComplete(winner, winnerIdx) {
   if (historyItems.length > 30) historyItems.pop();
 
   if (removeAfterSpinToggle.checked) {
-    activeTopics.splice(winnerIdx, 1);
+    const [removed] = activeTopics.splice(winnerIdx, 1);
+    if (removed) excludedTopicTexts.add(removed.text);
     lastWinnerIndex = -1;
     removeWinnerBtn.style.display = "none";
   } else {
@@ -1004,6 +1021,7 @@ addTopicForm.addEventListener("submit", (e) => {
   const val = newTopicInput.value.trim();
   if (!val) return;
 
+  excludedTopicTexts.delete(val);
   activeTopics.push({ text: val, category: "Kustom" });
   newTopicInput.value = "";
   saveState();
@@ -1017,8 +1035,15 @@ shuffleListBtn.addEventListener("click", () => {
   renderAll();
 });
 
+restoreBankBtn.addEventListener("click", () => {
+  if (isSpinning) return;
+  excludedTopicTexts.clear();
+  loadRandomTopicsFromBank();
+});
+
 clearListBtn.addEventListener("click", () => {
   if (isSpinning) return;
+  activeTopics.forEach((t) => excludedTopicTexts.add(t.text));
   activeTopics = [];
   saveState();
   renderAll();
@@ -1037,14 +1062,15 @@ resultModal.addEventListener("click", (e) => {
 
 spinAgainBtn.addEventListener("click", () => {
   closeResultModal();
-  if (activeTopics.length >= 2) {
+  if (activeTopics.length >= 1) {
     spinWheel();
   }
 });
 
 removeWinnerBtn.addEventListener("click", () => {
   if (lastWinnerIndex >= 0 && lastWinnerIndex < activeTopics.length) {
-    activeTopics.splice(lastWinnerIndex, 1);
+    const [removed] = activeTopics.splice(lastWinnerIndex, 1);
+    if (removed) excludedTopicTexts.add(removed.text);
     lastWinnerIndex = -1;
     saveState();
     renderAll();
@@ -1124,6 +1150,12 @@ function init() {
 
     const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);
     if (savedHistory) historyItems = JSON.parse(savedHistory);
+
+    const savedExcluded = localStorage.getItem(STORAGE_KEYS.EXCLUDED);
+    if (savedExcluded) {
+      const parsedEx = JSON.parse(savedExcluded);
+      if (Array.isArray(parsedEx)) excludedTopicTexts = new Set(parsedEx);
+    }
 
     const savedTopics = localStorage.getItem(STORAGE_KEYS.TOPICS);
     if (savedTopics) {
