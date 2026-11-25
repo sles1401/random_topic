@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpeakWheel — Roda Topik Acak Public Speaking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="confettiCanvas" class="confetti-canvas" aria-hidden="true"></canvas>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true">🎯</div>
+      <div>
+        <h1>SpeakWheel</h1>
+        <p>Roda Topik Acak untuk Latihan Public Speaking</p>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <button id="soundToggleBtn" class="btn btn-ghost" type="button" title="Suara Efek">
+        <span id="soundIcon">🔊</span>
+        <span id="soundLabel">Suara Aktif</span>
+      </button>
+      <button id="historyBtn" class="btn btn-ghost" type="button">
+        <span>📜</span>
+        <span>Riwayat (<span id="historyCount">0</span>)</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Kolom Kiri: Roda Putar -->
+    <section class="wheel-section" aria-label="Roda Pemilih Topik">
+      <div class="wheel-stage">
+        <div class="pointer" id="wheelPointer" aria-hidden="true">
+          <svg viewBox="0 0 40 48" width="40" height="48">
+            <path d="M20 46 L4 10 C2 4 6 0 12 0 L28 0 C34 0 38 4 36 10 Z" fill="#ef4444" stroke="#ffffff" stroke-width="3"/>
+            <circle cx="20" cy="13" r="4" fill="#ffffff"/>
+          </svg>
+        </div>
+
+        <div class="wheel-wrapper">
+          <canvas id="wheelCanvas" width="540" height="540"></canvas>
+          <button id="centerSpinBtn" class="center-spin-btn" type="button" aria-label="Putar Roda">
+            SPIN
+          </button>
+        </div>
+      </div>
+
+      <div class="wheel-controls">
+        <button id="spinBtn" class="btn btn-primary btn-lg" type="button">
+          <span>🎡</span>
+          <span>Putar Roda (Spin)</span>
+        </button>
+        <button id="randomizeWheelBtn" class="btn btn-secondary btn-lg" type="button">
+          <span>🎲</span>
+          <span>Acak Topik Baru</span>
+        </button>
+      </div>
+
+      <div class="quick-toggles">
+        <label class="toggle-chip">
+          <input type="checkbox" id="removeAfterSpinToggle" />
+          <span>Hapus topik setelah terpilih</span>
+        </label>
+        <label class="toggle-chip">
+          <input type="checkbox" id="keywordChallengeToggle" checked />
+          <span>Tantangan kata kunci wajib</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Kolom Kanan: Panel Topik & Pengaturan -->
+    <aside class="panel-section" aria-label="Daftar dan Pengaturan Topik">
+      <div class="card">
+        <div class="card-header">
+          <h2>Daftar Topik di Roda</h2>
+          <span class="badge" id="topicCountBadge">0 topik</span>
+        </div>
+
+        <div class="category-bar">
+          <label for="categorySelect" class="sr-only">Pilih Kategori Topik Acak</label>
+          <select id="categorySelect" class="select-input">
+            <option value="all">Semua Kategori (Campur)</option>
+            <option value="Opini & Gaya Hidup">Opini & Gaya Hidup</option>
+            <option value="Pengalaman Pribadi">Pengalaman Pribadi</option>
+            <option value="Imajinasi">Imajinasi ("Bagaimana Jika...")</option>
+            <option value="Teknologi & Masa Depan">Teknologi & Masa Depan</option>
+            <option value="Dilema & Perspektif">Dilema & Perspektif</option>
+            <option value="Karier & Produktivitas">Karier & Produktivitas</option>
+          </select>
+
+          <select id="wheelSizeSelect" class="select-input select-sm" title="Jumlah segmen saat acak">
+            <option value="6">6 segmen</option>
+            <option value="8" selected>8 segmen</option>
+            <option value="10">10 segmen</option>
+            <option value="12">12 segmen</option>
+          </select>
+        </div>
+
+        <form id="addTopicForm" class="add-topic-form">
+          <input
+            id="newTopicInput"
+            type="text"
+            class="text-input"
+            placeholder="Tambah topik sendiri..."
+            maxlength="120"
+            autocomplete="off"
+          />
+          <button type="submit" class="btn btn-primary">Tambah</button>
+        </form>
+
+        <div class="list-toolbar">
+          <button id="shuffleListBtn" class="btn btn-sm btn-ghost" type="button">🔀 Acak Urutan</button>
+          <button id="clearListBtn" class="btn btn-sm btn-ghost text-danger" type="button">🗑️ Kosongkan</button>
+        </div>
+
+        <ul id="topicList" class="topic-list"></ul>
+      </div>
+
+      <div class="card tip-card">
+        <h3>💡 Tips Latihan Impromptu</h3>
+        <p>
+          Gunakan pola <strong>PREP</strong> saat topik keluar:
+          <strong>P</strong>oint (pendapatmu),
+          <strong>R</strong>eason (alasan utama),
+          <strong>E</strong>xample (contoh nyata/cerita singkat),
+          <strong>P</strong>oint (kesimpulan penutup).
+        </p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modal Hasil & Timer Latihan -->
+  <div id="resultModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTopicTitle">
+    <div class="modal-card">
+      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Tutup">✕</button>
+
+      <div class="modal-badges">
+        <span id="modalCategoryBadge" class="badge badge-accent">Kategori</span>
+        <span id="modalFrameworkBadge" class="badge badge-soft">Pola: PREP</span>
+      </div>
+
+      <h2 id="modalTopicTitle" class="modal-topic">Topik terpilih akan muncul di sini</h2>
+
+      <div id="keywordBox" class="keyword-box hidden">
+        <span class="keyword-label">🔥 Kata Kunci Wajib:</span>
+        <strong id="modalKeyword" class="keyword-value">-</strong>
+      </div>
+
+      <p id="modalPromptHint" class="modal-hint"></p>
+
+      <!-- Timer Public Speaking -->
+      <div class="timer-box">
+        <div class="timer-header">
+          <span>⏱️ Timer Latihan Bicara</span>
+          <div class="duration-pills" role="group" aria-label="Pilih durasi">
+            <button type="button" class="pill" data-seconds="60">1 mnt</button>
+            <button type="button" class="pill active" data-seconds="90">1.5 mnt</button>
+            <button type="button" class="pill" data-seconds="120">2 mnt</button>
+            <button type="button" class="pill" data-seconds="180">3 mnt</button>
+          </div>
+        </div>
+
+        <div class="timer-display-row">
+          <div id="timerDisplay" class="timer-display">01:30</div>
+          <div class="timer-actions">
+            <button id="timerStartBtn" type="button" class="btn btn-primary">▶ Mulai</button>
+            <button id="timerResetBtn" type="button" class="btn btn-ghost">↺ Reset</button>
+          </div>
+        </div>
+
+        <div class="timer-progress-track">
+          <div id="timerProgressBar" class="timer-progress-bar"></div>
+        </div>
+      </div>
+
+      <div class="notes-box">
+        <label for="prepNotesInput">📝 Catatan Poin Singkat (opsional, sebelum mulai bicara):</label>
+        <textarea id="prepNotesInput" rows="2" placeholder="Tulis 2-3 kata kunci agar alur bicaramu terarah..."></textarea>
+      </div>
+
+      <div class="modal-footer">
+        <button id="removeWinnerBtn" type="button" class="btn btn-ghost text-danger">Hapus Topik Ini</button>
+        <button id="spinAgainBtn" type="button" class="btn btn-secondary">🎡 Putar Lagi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Riwayat -->
+  <div id="historyModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
+    <div class="modal-card modal-sm">
+      <button id="closeHistoryBtn" class="modal-close" type="button" aria-label="Tutup">✕</button>
+      <h2 id="historyModalTitle">📜 Riwayat Topik Terpilih</h2>
+      <ul id="historyList" class="history-list"></ul>
+      <div class="modal-footer">
+        <button id="clearHistoryBtn" type="button" class="btn btn-ghost text-danger">Hapus Riwayat</button>
+        <button id="closeHistoryFooterBtn" type="button" class="btn btn-primary">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
