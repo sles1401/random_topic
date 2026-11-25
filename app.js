@@ -217,8 +217,18 @@ const newTopicInput = document.getElementById("newTopicInput");
 const topicList = document.getElementById("topicList");
 const topicCountBadge = document.getElementById("topicCountBadge");
 const shuffleListBtn = document.getElementById("shuffleListBtn");
+const generateFreshBtn = document.getElementById("generateFreshBtn");
+const openImportBtn = document.getElementById("openImportBtn");
 const restoreBankBtn = document.getElementById("restoreBankBtn");
 const clearListBtn = document.getElementById("clearListBtn");
+
+const importModal = document.getElementById("importModal");
+const closeImportBtn = document.getElementById("closeImportBtn");
+const closeImportFooterBtn = document.getElementById("closeImportFooterBtn");
+const copyAiPromptBtn = document.getElementById("copyAiPromptBtn");
+const copyPromptStatus = document.getElementById("copyPromptStatus");
+const bulkTopicsInput = document.getElementById("bulkTopicsInput");
+const bulkImportBtn = document.getElementById("bulkImportBtn");
 const removeAfterSpinToggle = document.getElementById("removeAfterSpinToggle");
 const keywordChallengeToggle = document.getElementById("keywordChallengeToggle");
 const ruleChallengeToggle = document.getElementById("ruleChallengeToggle");
@@ -430,6 +440,104 @@ function loadRandomTopicsFromBank() {
   renderAll();
 }
 
+const PROCEDURAL_PARTS = {
+  "Opini & Gaya Hidup": [
+    ["Kenapa", "sebaiknya", "lebih sering dilakukan di akhir pekan?"],
+    ["Apakah", "benar-benar membuat hidup", "lebih berkualitas?"],
+    ["Satu alasan kenapa banyak orang sulit meninggalkan kebiasaan", "di era sekarang."]
+  ],
+  "Opini & Gaya Hidup_subjects": [
+    "jalan pagi tanpa HP", "memasak makanan sendiri", "membatasi belanja impulsif",
+    "tidur cukup 8 jam", "menulis jurnal harian", "nongkrong di kafe", "olahraga rutin"
+  ],
+  "Pengalaman Pribadi": [
+    ["Ceritakan momen ketika kamu belajar hal berharga dari", "secara tidak terduga."],
+    ["Bagaimana reaksimu saat pertama kali menghadapi", "dalam hidupmu?"],
+    ["Apa perubahan terbesar yang kamu rasakan setelah melewati", "?"]
+  ],
+  "Pengalaman Pribadi_subjects": [
+    "kegagalan kecil", "pujian dari orang asing", "tantangan baru di tempat kerja/kuliah",
+    "perjalanan sendirian", "perbedaan pendapat dengan teman dekat", "kesalahan komunikasi"
+  ],
+  "Imajinasi": [
+    ["Jika kamu bisa membuat satu aturan baru tentang", "untuk seluruh dunia, apa isinya?"],
+    ["Bayangkan besok pagi semua orang tiba-tiba lupa cara", ", apa yang terjadi?"],
+    ["Jika kamu diberi kesempatan mengulang satu hari tentang", ", hari apa yang kamu pilih?"]
+  ],
+  "Imajinasi_subjects": [
+    "menggunakan internet", "mengatur waktu tidur", "berkomunikasi tanpa kata-kata",
+    "liburan gratis", "memilih pekerjaan", "bertemu versi masa depan dirimu"
+  ],
+  "Teknologi & Masa Depan": [
+    ["Menurutmu, bagaimana peran", "dalam 10 tahun ke depan?"],
+    ["Lebih banyak manfaat atau risiko dari", "bagi generasi muda?"],
+    ["Skill apa yang paling dibutuhkan manusia agar tidak kalah dari", "?"]
+  ],
+  "Teknologi & Masa Depan_subjects": [
+    "asisten AI di kehidupan sehari-hari", "pembelajaran serba online", "otomasi pekerjaan",
+    "media sosial berbasis video pendek", "teknologi rumah pintar", "identitas digital"
+  ],
+  "Dilema & Perspektif": [
+    ["Dalam situasi sulit, mana yang lebih kamu pilih:", "?"],
+    ["Setujukah kamu bahwa", "sering kali lebih penting daripada sekadar hasil?"],
+    ["Kapan sebaiknya kita mempertahankan prinsip vs kompromi soal", "?"]
+  ],
+  "Dilema & Perspektif_subjects": [
+    "jujur apa adanya atau menjaga perasaan orang lain", "kecepatan atau ketelitian",
+    "stabilitas finansial atau mengejar passion", "bekerja keras diam-diam atau berani tampil",
+    "kesetiaan pada rencana atau fleksibilitas"
+  ],
+  "Karier & Produktivitas": [
+    ["Strategi paling efektif versi kamu untuk mengatasi", "saat deadline mepet."],
+    ["Mengapa kemampuan", "sering menjadi pembeda utama di dunia kerja?"],
+    ["Kesalahan umum apa yang sering terjadi saat seseorang mencoba", "?"]
+  ],
+  "Karier & Produktivitas_subjects": [
+    "rasa malas di pagi hari", "mendengarkan secara aktif", "memberikan feedback yang membangun",
+    "mengatur prioritas tugas", "berbicara di rapat penting", "menjaga work-life balance"
+  ],
+  "Romance & Hubungan": [
+    ["Menurutmu, seberapa penting", "untuk menjaga hubungan tetap sehat?"],
+    ["Apa tanda paling jelas bahwa seseorang tulus dalam hal", "?"],
+    ["Bagaimana cara terbaik menyikapi perbedaan soal", "dengan pasangan?"]
+  ],
+  "Romance & Hubungan_subjects": [
+    "komunikasi terbuka setiap hari", "memberi ruang pribadi (me time)",
+    "menunjukkan apresiasi kecil", "mengatasi rasa cemburu", "perencanaan masa depan bersama",
+    "saling mendukung karier dan hobi"
+  ]
+};
+
+function generateFreshTopics(category, count) {
+  const categories = category === "all"
+    ? Object.keys(PROCEDURAL_PARTS).filter((k) => !k.endsWith("_subjects"))
+    : [category];
+
+  const existingSet = new Set([
+    ...TOPIC_BANK.map((t) => t.text),
+    ...activeTopics.map((t) => t.text),
+    ...excludedTopicTexts
+  ]);
+
+  const candidates = [];
+  for (const cat of categories) {
+    const templates = PROCEDURAL_PARTS[cat] || [];
+    const subjects = PROCEDURAL_PARTS[`${cat}_subjects`] || [];
+    for (const tpl of templates) {
+      for (const subj of subjects) {
+        const text = tpl.length === 3
+          ? `${tpl[0]} ${subj} ${tpl[1]} ${tpl[2]}`.replace(/\s+\?/g, "?")
+          : `${tpl[0]} ${subj}${tpl[1].startsWith("?") || tpl[1].startsWith(",") ? "" : " "}${tpl[1]}`;
+        if (!existingSet.has(text)) {
+          candidates.push({ text, category: cat });
+        }
+      }
+    }
+  }
+
+  return shuffleArray(candidates).slice(0, count);
+}
+
 // ---------- Drawing Wheel ----------
 function drawWheel() {
   const size = wheelCanvas.width;
@@ -511,9 +619,17 @@ function renderTopicList() {
 
   if (activeTopics.length === 0) {
     const empty = document.createElement("li");
-    empty.className = "topic-item";
-    empty.innerHTML = `<span style="color: var(--text-muted)">Belum ada topik. Klik "Acak Topik Baru" atau tambah manual.</span>`;
+    empty.className = "empty-topic-box";
+    empty.innerHTML = `
+      <span>Topik di roda kosong${excludedTopicTexts.size > 0 ? " (atau topik di kategori ini sudah habis)" : ""}.</span>
+      <div class="empty-topic-actions">
+        <button type="button" class="btn btn-sm btn-secondary" id="inlineFreshBtn">✨ Buat Rekomendasi Baru</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="inlineImportBtn">📥 Import / Prompt AI</button>
+      </div>
+    `;
     topicList.appendChild(empty);
+    empty.querySelector("#inlineFreshBtn").addEventListener("click", handleGenerateFresh);
+    empty.querySelector("#inlineImportBtn").addEventListener("click", openImportModal);
   } else {
     activeTopics.forEach((topic, idx) => {
       const li = document.createElement("li");
@@ -1035,6 +1151,67 @@ shuffleListBtn.addEventListener("click", () => {
   renderAll();
 });
 
+function handleGenerateFresh() {
+  if (isSpinning) return;
+  const cat = categorySelect.value;
+  const count = parseInt(wheelSizeSelect.value, 10) || 8;
+  const fresh = generateFreshTopics(cat, count);
+  if (fresh.length === 0) {
+    alert("Semua variasi rekomendasi otomatis sudah terpakai. Klik 'Pulihkan' atau gunakan 'Import / Prompt AI' untuk topik baru!");
+    return;
+  }
+  activeTopics = fresh;
+  saveState();
+  renderAll();
+}
+
+function openImportModal() {
+  copyPromptStatus.textContent = "";
+  importModal.classList.remove("hidden");
+}
+
+generateFreshBtn.addEventListener("click", handleGenerateFresh);
+openImportBtn.addEventListener("click", openImportModal);
+closeImportBtn.addEventListener("click", () => importModal.classList.add("hidden"));
+closeImportFooterBtn.addEventListener("click", () => importModal.classList.add("hidden"));
+importModal.addEventListener("click", (e) => {
+  if (e.target === importModal) importModal.classList.add("hidden");
+});
+
+copyAiPromptBtn.addEventListener("click", async () => {
+  const catLabel = categorySelect.value === "all" ? "berbagai kategori menarik" : `kategori "${categorySelect.value}"`;
+  const promptText = `Buatkan 10 topik latihan public speaking (impromptu speaking) dalam bahasa Indonesia untuk ${catLabel}.\nAturan:\n- Buat topik yang segar, singkat (1 kalimat/pertanyaan), dan memancing opini atau cerita.\n- Tulis 1 topik per baris tanpa penjelasan tambahan.`;
+  try {
+    await navigator.clipboard.writeText(promptText);
+    copyPromptStatus.textContent = "✅ Prompt berhasil disalin!";
+  } catch {
+    copyPromptStatus.textContent = "Gagal menyalin otomatis, silakan salin manual.";
+  }
+});
+
+bulkImportBtn.addEventListener("click", () => {
+  if (isSpinning) return;
+  const lines = bulkTopicsInput.value
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, "").trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length === 0) return;
+
+  const cat = categorySelect.value === "all" ? "Import AI" : categorySelect.value;
+  lines.forEach((text) => {
+    excludedTopicTexts.delete(text);
+    if (!activeTopics.some((t) => t.text === text)) {
+      activeTopics.push({ text, category: cat });
+    }
+  });
+
+  bulkTopicsInput.value = "";
+  saveState();
+  renderAll();
+  importModal.classList.add("hidden");
+});
+
 restoreBankBtn.addEventListener("click", () => {
   if (isSpinning) return;
   excludedTopicTexts.clear();
@@ -1125,6 +1302,7 @@ document.addEventListener("keydown", (e) => {
     if (!resultModal.classList.contains("hidden")) closeResultModal();
     if (!historyModal.classList.contains("hidden")) historyModal.classList.add("hidden");
     if (!rulesModal.classList.contains("hidden")) rulesModal.classList.add("hidden");
+    if (!importModal.classList.contains("hidden")) importModal.classList.add("hidden");
     return;
   }
 
@@ -1134,7 +1312,8 @@ document.addEventListener("keydown", (e) => {
     if (
       !resultModal.classList.contains("hidden") ||
       !historyModal.classList.contains("hidden") ||
-      !rulesModal.classList.contains("hidden")
+      !rulesModal.classList.contains("hidden") ||
+      !importModal.classList.contains("hidden")
     ) return;
 
     e.preventDefault();

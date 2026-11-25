@@ -360,9 +360,49 @@ textarea:focus {
 
 .list-toolbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 10px;
+}
+
+.empty-topic-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.empty-topic-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.import-prompt-box {
+  background: #0f172a;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 12px 0 14px;
+}
+
+.import-prompt-box p {
+  margin: 0 0 10px;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.copy-status {
+  margin-left: 8px;
+  font-size: 0.8rem;
+  color: #6ee7b7;
 }
 
 .topic-list {

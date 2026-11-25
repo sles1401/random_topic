@@ -142,6 +142,8 @@
 
         <div class="list-toolbar">
           <button id="shuffleListBtn" class="btn btn-sm btn-ghost" type="button">🔀 Acak Urutan</button>
+          <button id="generateFreshBtn" class="btn btn-sm btn-ghost" type="button" title="Buat rekomendasi topik baru otomatis">✨ Rekomendasi Baru</button>
+          <button id="openImportBtn" class="btn btn-sm btn-ghost" type="button" title="Salin prompt AI atau tempel banyak topik">📥 Import / Prompt AI</button>
           <button id="restoreBankBtn" class="btn btn-sm btn-ghost hidden" type="button" title="Pulihkan topik yang sudah dihapus">↺ Pulihkan</button>
           <button id="clearListBtn" class="btn btn-sm btn-ghost text-danger" type="button">🗑️ Kosongkan</button>
         </div>
@@ -258,6 +260,30 @@
       <div class="modal-footer">
         <button id="removeWinnerBtn" type="button" class="btn btn-ghost text-danger">Hapus Topik Ini</button>
         <button id="spinAgainBtn" type="button" class="btn btn-secondary">🎡 Putar Lagi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Import & Prompt AI -->
+  <div id="importModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+    <div class="modal-card modal-sm">
+      <button id="closeImportBtn" class="modal-close" type="button" aria-label="Tutup">✕</button>
+      <h2 id="importModalTitle">📥 Import Topik &amp; Prompt AI</h2>
+
+      <div class="import-prompt-box">
+        <p>Butuh ide topik segar? Salin prompt di bawah ini, tempel ke ChatGPT/Gemini, lalu <em>paste</em> hasilnya ke kotak di bawah.</p>
+        <button id="copyAiPromptBtn" type="button" class="btn btn-sm btn-secondary">📋 Salin Prompt AI</button>
+        <span id="copyPromptStatus" class="copy-status"></span>
+      </div>
+
+      <div class="notes-box">
+        <label for="bulkTopicsInput">Tempel daftar topik (1 baris = 1 topik):</label>
+        <textarea id="bulkTopicsInput" rows="6" placeholder="1. Kenapa waktu terasa cepat saat liburan?&#10;2. Satu hal yang ingin kamu pelajari ulang&#10;3. ..."></textarea>
+      </div>
+
+      <div class="modal-footer">
+        <button id="closeImportFooterBtn" type="button" class="btn btn-ghost">Batal</button>
+        <button id="bulkImportBtn" type="button" class="btn btn-primary">Masukkan ke Roda</button>
       </div>
     </div>
   </div>
