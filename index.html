@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#6366f1" />
   <title>SpeakWheel — Roda Topik Acak Public Speaking</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -48,7 +51,8 @@
         </div>
 
         <div class="wheel-wrapper">
-          <canvas id="wheelCanvas" width="540" height="540"></canvas>
+          <canvas id="wheelCanvas" width="560" height="560"></canvas>
+          <div id="wheelTooltip" class="wheel-tooltip hidden" role="status"></div>
           <button id="centerSpinBtn" class="center-spin-btn" type="button" aria-label="Putar Roda">
             SPIN
           </button>
@@ -76,6 +80,8 @@
           <span>Tantangan kata kunci wajib</span>
         </label>
       </div>
+
+      <p class="shortcut-hint">⌨️ Shortcut: Tekan <kbd>Spasi</kbd> untuk memutar roda • <kbd>Esc</kbd> untuk menutup modal</p>
     </section>
 
     <!-- Kolom Kanan: Panel Topik & Pengaturan -->
@@ -105,6 +111,13 @@
             <option value="10">10 segmen</option>
             <option value="12">12 segmen</option>
           </select>
+        </div>
+
+        <div class="preset-bar" aria-label="Preset Paket Topik">
+          <span class="preset-label">Paket Cepat:</span>
+          <button type="button" class="preset-chip" data-preset="interview">💼 Interview Kerja</button>
+          <button type="button" class="preset-chip" data-preset="debate">⚖️ Debat Ringan</button>
+          <button type="button" class="preset-chip" data-preset="icebreak">🎉 Ice Breaking</button>
         </div>
 
         <form id="addTopicForm" class="add-topic-form">
@@ -159,20 +172,33 @@
 
       <p id="modalPromptHint" class="modal-hint"></p>
 
-      <!-- Timer Public Speaking -->
+      <!-- Timer Public Speaking 2 Tahap -->
       <div class="timer-box">
-        <div class="timer-header">
-          <span>⏱️ Timer Latihan Bicara</span>
-          <div class="duration-pills" role="group" aria-label="Pilih durasi">
-            <button type="button" class="pill" data-seconds="60">1 mnt</button>
-            <button type="button" class="pill active" data-seconds="90">1.5 mnt</button>
-            <button type="button" class="pill" data-seconds="120">2 mnt</button>
-            <button type="button" class="pill" data-seconds="180">3 mnt</button>
+        <div class="timer-settings-row">
+          <div class="timer-setting-group">
+            <span class="setting-label">⏳ Persiapan:</span>
+            <div class="duration-pills" role="group" aria-label="Pilih waktu persiapan">
+              <button type="button" class="prep-pill" data-prep="0">0 dtk</button>
+              <button type="button" class="prep-pill active" data-prep="15">15 dtk</button>
+              <button type="button" class="prep-pill" data-prep="30">30 dtk</button>
+            </div>
+          </div>
+
+          <div class="timer-setting-group">
+            <span class="setting-label">🎙️ Bicara:</span>
+            <div class="duration-pills" role="group" aria-label="Pilih durasi bicara">
+              <button type="button" class="pill" data-seconds="60">1 mnt</button>
+              <button type="button" class="pill active" data-seconds="90">1.5 mnt</button>
+              <button type="button" class="pill" data-seconds="120">2 mnt</button>
+              <button type="button" class="pill" data-seconds="180">3 mnt</button>
+            </div>
           </div>
         </div>
 
+        <div id="timerPhaseBadge" class="timer-phase-badge">Siap memulai latihan</div>
+
         <div class="timer-display-row">
-          <div id="timerDisplay" class="timer-display">01:30</div>
+          <div id="timerDisplay" class="timer-display">00:15</div>
           <div class="timer-actions">
             <button id="timerStartBtn" type="button" class="btn btn-primary">▶ Mulai</button>
             <button id="timerResetBtn" type="button" class="btn btn-ghost">↺ Reset</button>
@@ -184,9 +210,35 @@
         </div>
       </div>
 
+      <!-- Rekam Suara Lokal -->
+      <div class="recorder-box">
+        <div class="recorder-row">
+          <div class="recorder-info">
+            <span class="recorder-title">🎧 Rekam Suara (Lokal)</span>
+            <span id="recorderStatus" class="recorder-status">Dengarkan ulang untuk cek intonasi & filler words</span>
+          </div>
+          <button id="recordBtn" type="button" class="btn btn-sm btn-ghost">🎙️ Rekam</button>
+        </div>
+        <div id="audioPlaybackWrap" class="audio-playback hidden">
+          <audio id="audioPlayback" controls></audio>
+          <a id="downloadAudioLink" class="btn btn-sm btn-ghost" download="latihan-public-speaking.webm">⬇ Unduh</a>
+        </div>
+      </div>
+
       <div class="notes-box">
-        <label for="prepNotesInput">📝 Catatan Poin Singkat (opsional, sebelum mulai bicara):</label>
+        <label for="prepNotesInput">📝 Catatan Poin Singkat (opsional, saat Prep Time):</label>
         <textarea id="prepNotesInput" rows="2" placeholder="Tulis 2-3 kata kunci agar alur bicaramu terarah..."></textarea>
+      </div>
+
+      <!-- Self-Check Evaluasi -->
+      <div class="eval-box">
+        <div class="eval-header">✅ Self-Check Evaluasi Setelah Bicara</div>
+        <div class="eval-list">
+          <label class="eval-item"><input type="checkbox" class="eval-check" /> Pembukaan langsung menarik perhatian</label>
+          <label class="eval-item"><input type="checkbox" class="eval-check" /> Alur jelas & terstruktur sesuai pola</label>
+          <label class="eval-item"><input type="checkbox" class="eval-check" /> Intonasi tegas & minim filler words ("eee/anu")</label>
+          <label class="eval-item"><input type="checkbox" class="eval-check" /> Kata kunci wajib berhasil diselipkan</label>
+        </div>
       </div>
 
       <div class="modal-footer">

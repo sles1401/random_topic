@@ -87,6 +87,39 @@ const TOPIC_BANK = [
   { text: "Haruskah pasangan tahu semua password media sosial satu sama lain?", category: "Romance & Hubungan" },
 ];
 
+const PRESETS = {
+  interview: [
+    { text: "Ceritakan tentang dirimu dalam 60 detik.", category: "Interview Kerja" },
+    { text: "Apa kelemahan terbesarmu dan bagaimana mengatasinya?", category: "Interview Kerja" },
+    { text: "Mengapa kami harus memilih kamu dibanding kandidat lain?", category: "Interview Kerja" },
+    { text: "Ceritakan konflik tim tersulit yang pernah kamu selesaikan.", category: "Interview Kerja" },
+    { text: "Kegagalan terbesar yang pernah kamu alami dan pelajarannya.", category: "Interview Kerja" },
+    { text: "Di mana kamu melihat dirimu 3 tahun dari sekarang?", category: "Interview Kerja" },
+    { text: "Bagaimana caramu bekerja di bawah tekanan tenggat ketat?", category: "Interview Kerja" },
+    { text: "Prestasi apa yang paling membuatmu bangga sejauh ini?", category: "Interview Kerja" }
+  ],
+  debate: [
+    { text: "WFO lebih baik daripada WFH untuk perkembangan karier.", category: "Debat Ringan" },
+    { text: "Kuliah online sama efektifnya dengan kuliah tatap muka.", category: "Debat Ringan" },
+    { text: "AI sebaiknya dibatasi penggunaannya di industri kreatif.", category: "Debat Ringan" },
+    { text: "Kualitas lebih penting daripada kecepatan dalam bekerja.", category: "Debat Ringan" },
+    { text: "Liburan spontan lebih seru daripada liburan terencana.", category: "Debat Ringan" },
+    { text: "Memulai bisnis sendiri lebih baik daripada jadi karyawan.", category: "Debat Ringan" },
+    { text: "Uang tunai sebaiknya digantikan sepenuhnya oleh pembayaran digital.", category: "Debat Ringan" },
+    { text: "Membaca buku fisik lebih baik daripada membaca e-book.", category: "Debat Ringan" }
+  ],
+  icebreak: [
+    { text: "Makanan aneh apa yang ternyata kamu suka?", category: "Ice Breaking" },
+    { text: "Kalau hidupmu punya lagu tema, lagu apa yang diputar?", category: "Ice Breaking" },
+    { text: "Hal paling receh yang selalu bikin kamu tertawa.", category: "Ice Breaking" },
+    { text: "Jika besok langsung diberi tiket gratis ke mana saja, pilih ke mana?", category: "Ice Breaking" },
+    { text: "Satu bakat terpendam atau unik yang jarang orang tahu.", category: "Ice Breaking" },
+    { text: "Tim bubur diaduk vs tidak diaduk — pertahankan argumenmu!", category: "Ice Breaking" },
+    { text: "Siapa karakter fiksi yang paling mirip dengan kepribadianmu?", category: "Ice Breaking" },
+    { text: "Kebiasaan pagi hari yang wajib dilakukan sebelum beraktivitas.", category: "Ice Breaking" }
+  ]
+};
+
 const CHALLENGE_KEYWORDS = [
   "Kopi", "Jembatan", "Cermin", "Kompas", "Payung", "Jam Tangan",
   "Sepatu", "Lampu Merah", "Kunci", "Pelangi", "Buku Catatan", "Tangga",
@@ -132,10 +165,18 @@ let currentAngle = 0; // radian
 let isSpinning = false;
 let lastWinnerIndex = -1;
 
-// Timer state
-let timerDuration = 90;
-let timerRemaining = 90;
+// Timer 2 tahap state
+let prepDuration = 15;
+let speakDuration = 90;
+let timerPhase = "idle"; // "idle" | "prep" | "speak" | "done"
+let timerRemaining = 15;
 let timerInterval = null;
+
+// Audio Recorder state
+let mediaRecorder = null;
+let audioChunks = [];
+let audioObjectUrl = null;
+let isRecording = false;
 
 // Audio Context (Web Audio API)
 let audioCtx = null;
@@ -143,6 +184,7 @@ let audioCtx = null;
 // Elemen DOM
 const wheelCanvas = document.getElementById("wheelCanvas");
 const ctx = wheelCanvas.getContext("2d");
+const wheelTooltip = document.getElementById("wheelTooltip");
 const confettiCanvas = document.getElementById("confettiCanvas");
 const confettiCtx = confettiCanvas.getContext("2d");
 
@@ -152,6 +194,7 @@ const spinBtn = document.getElementById("spinBtn");
 const randomizeWheelBtn = document.getElementById("randomizeWheelBtn");
 const categorySelect = document.getElementById("categorySelect");
 const wheelSizeSelect = document.getElementById("wheelSizeSelect");
+const presetChips = document.querySelectorAll(".preset-chip");
 const addTopicForm = document.getElementById("addTopicForm");
 const newTopicInput = document.getElementById("newTopicInput");
 const topicList = document.getElementById("topicList");
@@ -186,11 +229,20 @@ const prepNotesInput = document.getElementById("prepNotesInput");
 const removeWinnerBtn = document.getElementById("removeWinnerBtn");
 const spinAgainBtn = document.getElementById("spinAgainBtn");
 
+const timerPhaseBadge = document.getElementById("timerPhaseBadge");
 const timerDisplay = document.getElementById("timerDisplay");
 const timerStartBtn = document.getElementById("timerStartBtn");
 const timerResetBtn = document.getElementById("timerResetBtn");
 const timerProgressBar = document.getElementById("timerProgressBar");
 const durationPills = document.querySelectorAll(".pill");
+const prepPills = document.querySelectorAll(".prep-pill");
+
+const recordBtn = document.getElementById("recordBtn");
+const recorderStatus = document.getElementById("recorderStatus");
+const audioPlaybackWrap = document.getElementById("audioPlaybackWrap");
+const audioPlayback = document.getElementById("audioPlayback");
+const downloadAudioLink = document.getElementById("downloadAudioLink");
+const evalChecks = document.querySelectorAll(".eval-check");
 
 // ---------- Audio Helper ----------
 function ensureAudioCtx() {
@@ -249,6 +301,26 @@ function playWinSound() {
   });
 }
 
+function playPhaseCueSound() {
+  if (!soundEnabled) return;
+  ensureAudioCtx();
+  if (!audioCtx) return;
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(740, audioCtx.currentTime);
+  osc.frequency.setValueAtTime(987.77, audioCtx.currentTime + 0.12);
+
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.32);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.34);
+}
+
 function playTimerDoneSound() {
   if (!soundEnabled) return;
   ensureAudioCtx();
@@ -281,9 +353,35 @@ function shuffleArray(arr) {
   return copy;
 }
 
-function truncateLabel(text, maxLen = 24) {
-  if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen - 1).trimEnd() + "…";
+function wrapSegmentLines(text, maxWidth, font) {
+  ctx.save();
+  ctx.font = font;
+  const words = text.split(/\s+/);
+  const lines = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (ctx.measureText(testLine).width <= maxWidth) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+      if (lines.length === 1) {
+        // Baris kedua: potong rapi dengan elipsis jika masih kepanjangan
+        let remaining = [word, ...words.slice(words.indexOf(word) + 1)].join(" ");
+        while (ctx.measureText(remaining + "…").width > maxWidth && remaining.length > 3) {
+          remaining = remaining.slice(0, -1).trimEnd();
+        }
+        lines.push(remaining.length < text.length ? remaining + "…" : remaining);
+        ctx.restore();
+        return lines;
+      }
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  ctx.restore();
+  return lines.slice(0, 2);
 }
 
 function saveState() {
@@ -330,6 +428,9 @@ function drawWheel() {
   }
 
   const sliceAngle = (Math.PI * 2) / activeTopics.length;
+  const fontSize = activeTopics.length >= 10 ? 12 : 14;
+  const font = `700 ${fontSize}px 'Plus Jakarta Sans', sans-serif`;
+  const maxTextWidth = radius - 78;
 
   activeTopics.forEach((topic, i) => {
     const startAngle = currentAngle + i * sliceAngle;
@@ -347,7 +448,7 @@ function drawWheel() {
     ctx.strokeStyle = "rgba(15, 23, 42, 0.7)";
     ctx.stroke();
 
-    // Teks topik di dalam segmen
+    // Teks topik 1-2 baris di dalam segmen
     ctx.save();
     ctx.translate(center, center);
     ctx.rotate(startAngle + sliceAngle / 2);
@@ -355,12 +456,18 @@ function drawWheel() {
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#ffffff";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
     ctx.shadowBlur = 4;
+    ctx.font = font;
 
-    const fontSize = activeTopics.length >= 10 ? 13 : 15;
-    ctx.font = `700 ${fontSize}px 'Plus Jakarta Sans', sans-serif`;
-    ctx.fillText(truncateLabel(topic.text, activeTopics.length >= 10 ? 20 : 25), radius - 22, 0);
+    const lines = wrapSegmentLines(topic.text, maxTextWidth, font);
+    const lineHeight = fontSize + 3;
+    const startY = lines.length === 2 ? -lineHeight / 2 : 0;
+
+    lines.forEach((line, lineIdx) => {
+      ctx.fillText(line, radius - 20, startY + lineIdx * lineHeight);
+    });
+
     ctx.restore();
   });
 }
@@ -469,28 +576,30 @@ function renderAll() {
 }
 
 // ---------- Spin Logic ----------
-function getWinnerIndex(angle, count) {
+function getSegmentIndexAtAngle(targetAngle, wheelAngle, count) {
   const sliceAngle = (Math.PI * 2) / count;
-  // Pointer ada di posisi atas = -Math.PI / 2 (atau 270 derajat)
-  const pointerAngle = -Math.PI / 2;
-  let relativeAngle = (pointerAngle - angle) % (Math.PI * 2);
+  let relativeAngle = (targetAngle - wheelAngle) % (Math.PI * 2);
   if (relativeAngle < 0) relativeAngle += Math.PI * 2;
   return Math.floor(relativeAngle / sliceAngle) % count;
+}
+
+function getWinnerIndex(angle, count) {
+  return getSegmentIndexAtAngle(-Math.PI / 2, angle, count);
 }
 
 function spinWheel() {
   if (isSpinning || activeTopics.length < 2) return;
 
+  wheelTooltip.classList.add("hidden");
   isSpinning = true;
   spinBtn.disabled = true;
   centerSpinBtn.disabled = true;
 
   const startAngle = currentAngle;
-  // 5 sampai 8 putaran penuh + sudut acak
   const extraSpins = (5 + Math.random() * 3) * Math.PI * 2;
   const randomOffset = Math.random() * Math.PI * 2;
   const totalDelta = extraSpins + randomOffset;
-  const duration = 4300; // ms
+  const duration = 4300;
   const startTime = performance.now();
 
   let lastTickSegment = getWinnerIndex(currentAngle, activeTopics.length);
@@ -536,7 +645,6 @@ function onSpinComplete(winner, winnerIdx) {
   playWinSound();
   launchConfetti();
 
-  // Simpan ke riwayat
   const nowStr = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
   historyItems.unshift({
     text: winner.text,
@@ -558,7 +666,7 @@ function onSpinComplete(winner, winnerIdx) {
   openResultModal(winner);
 }
 
-// ---------- Modal & Timer ----------
+// ---------- Modal & Timer 2 Tahap ----------
 function openResultModal(topic) {
   modalCategoryBadge.textContent = topic.category || "Kustom";
   modalTopicTitle.textContent = topic.text;
@@ -576,12 +684,15 @@ function openResultModal(topic) {
   }
 
   prepNotesInput.value = "";
+  evalChecks.forEach((chk) => { chk.checked = false; });
+  resetRecorderUI();
   resetTimer();
   resultModal.classList.remove("hidden");
 }
 
 function closeResultModal() {
   stopTimer();
+  stopRecordingIfActive();
   resultModal.classList.add("hidden");
 }
 
@@ -593,14 +704,36 @@ function formatTime(sec) {
 
 function updateTimerUI() {
   timerDisplay.textContent = formatTime(timerRemaining);
-  const pct = (timerRemaining / timerDuration) * 100;
-  timerProgressBar.style.width = `${pct}%`;
 
-  timerDisplay.classList.remove("warning", "done");
-  if (timerRemaining === 0) {
+  const totalForPhase =
+    timerPhase === "prep" || (timerPhase === "idle" && prepDuration > 0)
+      ? prepDuration
+      : speakDuration;
+
+  const pct = totalForPhase > 0 ? (timerRemaining / totalForPhase) * 100 : 0;
+  timerProgressBar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+
+  timerDisplay.classList.remove("prep", "warning", "done");
+  timerPhaseBadge.classList.remove("prep", "speak", "done");
+
+  if (timerPhase === "idle") {
+    timerPhaseBadge.textContent = prepDuration > 0
+      ? `Siap • Persiapan ${prepDuration} dtk lalu Bicara`
+      : "Siap • Langsung mulai bicara";
+  } else if (timerPhase === "prep") {
+    timerDisplay.classList.add("prep");
+    timerPhaseBadge.classList.add("prep");
+    timerPhaseBadge.textContent = "⏳ Persiapan — susun poin singkatmu";
+  } else if (timerPhase === "speak") {
+    timerPhaseBadge.classList.add("speak");
+    timerPhaseBadge.textContent = "🎙️ Waktu Bicara — sampaikan dengan percaya diri!";
+    if (timerRemaining <= 15) {
+      timerDisplay.classList.add("warning");
+    }
+  } else if (timerPhase === "done") {
     timerDisplay.classList.add("done");
-  } else if (timerRemaining <= 15) {
-    timerDisplay.classList.add("warning");
+    timerPhaseBadge.classList.add("done");
+    timerPhaseBadge.textContent = "🏁 Waktu Habis! Cek hasil evaluasimu di bawah";
   }
 }
 
@@ -614,7 +747,8 @@ function stopTimer() {
 
 function resetTimer() {
   stopTimer();
-  timerRemaining = timerDuration;
+  timerPhase = "idle";
+  timerRemaining = prepDuration > 0 ? prepDuration : speakDuration;
   updateTimerUI();
 }
 
@@ -624,20 +758,106 @@ function toggleTimer() {
     return;
   }
 
-  if (timerRemaining <= 0) {
-    timerRemaining = timerDuration;
+  if (timerPhase === "idle" || timerPhase === "done") {
+    if (prepDuration > 0) {
+      timerPhase = "prep";
+      timerRemaining = prepDuration;
+    } else {
+      timerPhase = "speak";
+      timerRemaining = speakDuration;
+    }
   }
 
+  updateTimerUI();
   timerStartBtn.textContent = "⏸ Jeda";
+
   timerInterval = setInterval(() => {
     timerRemaining -= 1;
-    updateTimerUI();
 
     if (timerRemaining <= 0) {
+      if (timerPhase === "prep") {
+        timerPhase = "speak";
+        timerRemaining = speakDuration;
+        playPhaseCueSound();
+        updateTimerUI();
+        return;
+      }
+
+      timerRemaining = 0;
+      timerPhase = "done";
       stopTimer();
       playTimerDoneSound();
     }
+
+    updateTimerUI();
   }, 1000);
+}
+
+// ---------- Voice Recorder (Lokal via MediaRecorder) ----------
+function resetRecorderUI() {
+  stopRecordingIfActive();
+  if (audioObjectUrl) {
+    URL.revokeObjectURL(audioObjectUrl);
+    audioObjectUrl = null;
+  }
+  audioPlayback.src = "";
+  audioPlaybackWrap.classList.add("hidden");
+  recorderStatus.textContent = "Dengarkan ulang untuk cek intonasi & filler words";
+  recordBtn.textContent = "🎙️ Rekam";
+  recordBtn.classList.remove("btn-recording");
+}
+
+function stopRecordingIfActive() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+  }
+}
+
+async function toggleRecording() {
+  if (isRecording) {
+    stopRecordingIfActive();
+    return;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    recorderStatus.textContent = "Browser ini tidak mendukung perekaman suara.";
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      isRecording = false;
+      stream.getTracks().forEach((track) => track.stop());
+
+      const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+      if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl);
+      audioObjectUrl = URL.createObjectURL(blob);
+
+      audioPlayback.src = audioObjectUrl;
+      downloadAudioLink.href = audioObjectUrl;
+      audioPlaybackWrap.classList.remove("hidden");
+      recorderStatus.textContent = "Rekaman siap diputar!";
+      recordBtn.textContent = "🎙️ Rekam Ulang";
+      recordBtn.classList.remove("btn-recording");
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    audioPlaybackWrap.classList.add("hidden");
+    recorderStatus.textContent = "● Sedang merekam suara...";
+    recordBtn.textContent = "⏹ Stop";
+    recordBtn.classList.add("btn-recording");
+  } catch {
+    recorderStatus.textContent = "Izin mikrofon ditolak atau tidak tersedia.";
+  }
 }
 
 // ---------- Confetti ----------
@@ -664,7 +884,7 @@ function launchConfetti() {
     pieces.forEach((p) => {
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.35; // gravity
+      p.vy += 0.35;
       p.rotation += p.vRot;
       p.alpha -= 0.012;
 
@@ -690,6 +910,37 @@ function launchConfetti() {
   requestAnimationFrame(step);
 }
 
+// ---------- Hover Tooltip pada Wheel ----------
+wheelCanvas.addEventListener("mousemove", (e) => {
+  if (isSpinning || activeTopics.length === 0) {
+    wheelTooltip.classList.add("hidden");
+    return;
+  }
+
+  const rect = wheelCanvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (wheelCanvas.width / rect.width) - wheelCanvas.width / 2;
+  const y = (e.clientY - rect.top) * (wheelCanvas.height / rect.height) - wheelCanvas.height / 2;
+  const dist = Math.hypot(x, y);
+  const radius = wheelCanvas.width / 2 - 10;
+
+  if (dist > radius || dist < 44) {
+    wheelTooltip.classList.add("hidden");
+    return;
+  }
+
+  const pointerAngle = Math.atan2(y, x);
+  const idx = getSegmentIndexAtAngle(pointerAngle, currentAngle, activeTopics.length);
+  const topic = activeTopics[idx];
+  if (topic) {
+    wheelTooltip.textContent = `${topic.text} (${topic.category || "Kustom"})`;
+    wheelTooltip.classList.remove("hidden");
+  }
+});
+
+wheelCanvas.addEventListener("mouseleave", () => {
+  wheelTooltip.classList.add("hidden");
+});
+
 // ---------- Event Listeners ----------
 spinBtn.addEventListener("click", spinWheel);
 centerSpinBtn.addEventListener("click", spinWheel);
@@ -703,6 +954,17 @@ categorySelect.addEventListener("change", () => {
 
 wheelSizeSelect.addEventListener("change", () => {
   if (!isSpinning) loadRandomTopicsFromBank();
+});
+
+presetChips.forEach((chip) => {
+  chip.addEventListener("click", () => {
+    if (isSpinning) return;
+    const key = chip.dataset.preset;
+    if (!PRESETS[key]) return;
+    activeTopics = [...PRESETS[key]];
+    saveState();
+    renderAll();
+  });
 });
 
 addTopicForm.addEventListener("submit", (e) => {
@@ -759,17 +1021,27 @@ removeWinnerBtn.addEventListener("click", () => {
   closeResultModal();
 });
 
+prepPills.forEach((pill) => {
+  pill.addEventListener("click", () => {
+    prepPills.forEach((p) => p.classList.remove("active"));
+    pill.classList.add("active");
+    prepDuration = parseInt(pill.dataset.prep, 10);
+    resetTimer();
+  });
+});
+
 durationPills.forEach((pill) => {
   pill.addEventListener("click", () => {
     durationPills.forEach((p) => p.classList.remove("active"));
     pill.classList.add("active");
-    timerDuration = parseInt(pill.dataset.seconds, 10);
+    speakDuration = parseInt(pill.dataset.seconds, 10);
     resetTimer();
   });
 });
 
 timerStartBtn.addEventListener("click", toggleTimer);
 timerResetBtn.addEventListener("click", resetTimer);
+recordBtn.addEventListener("click", toggleRecording);
 
 historyBtn.addEventListener("click", () => historyModal.classList.remove("hidden"));
 closeHistoryBtn.addEventListener("click", () => historyModal.classList.add("hidden"));
@@ -781,6 +1053,24 @@ clearHistoryBtn.addEventListener("click", () => {
   historyItems = [];
   saveState();
   renderHistory();
+});
+
+// Keyboard Shortcuts
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (!resultModal.classList.contains("hidden")) closeResultModal();
+    if (!historyModal.classList.contains("hidden")) historyModal.classList.add("hidden");
+    return;
+  }
+
+  if (e.code === "Space") {
+    const tag = document.activeElement?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON") return;
+    if (!resultModal.classList.contains("hidden") || !historyModal.classList.contains("hidden")) return;
+
+    e.preventDefault();
+    spinWheel();
+  }
 });
 
 // ---------- Init ----------
@@ -808,7 +1098,11 @@ function init() {
   } else {
     renderAll();
   }
-  updateTimerUI();
+  resetTimer();
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
 }
 
 init();

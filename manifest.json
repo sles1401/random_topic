@@ -1,0 +1,17 @@
+{
+  "name": "SpeakWheel — Roda Topik Acak Public Speaking",
+  "short_name": "SpeakWheel",
+  "description": "Roda putar topik acak untuk latihan public speaking dan impromptu speaking lengkap dengan timer, rekaman suara, dan panduan pola bicara.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
