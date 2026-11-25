@@ -28,6 +28,10 @@
     </div>
 
     <div class="topbar-actions">
+      <button id="rulesBtn" class="btn btn-ghost" type="button">
+        <span>📖</span>
+        <span>Aturan Main</span>
+      </button>
       <button id="soundToggleBtn" class="btn btn-ghost" type="button" title="Suara Efek">
         <span id="soundIcon">🔊</span>
         <span id="soundLabel">Suara Aktif</span>
@@ -78,6 +82,10 @@
         <label class="toggle-chip">
           <input type="checkbox" id="keywordChallengeToggle" checked />
           <span>Tantangan kata kunci wajib</span>
+        </label>
+        <label class="toggle-chip">
+          <input type="checkbox" id="ruleChallengeToggle" checked />
+          <span>Rule tantangan acak</span>
         </label>
       </div>
 
@@ -170,6 +178,11 @@
         <strong id="modalKeyword" class="keyword-value">-</strong>
       </div>
 
+      <div id="ruleBox" class="rule-box hidden">
+        <span class="rule-label">🎯 Rule Tantangan:</span>
+        <span id="modalRule" class="rule-value">-</span>
+      </div>
+
       <p id="modalPromptHint" class="modal-hint"></p>
 
       <!-- Timer Public Speaking 2 Tahap -->
@@ -244,6 +257,39 @@
       <div class="modal-footer">
         <button id="removeWinnerBtn" type="button" class="btn btn-ghost text-danger">Hapus Topik Ini</button>
         <button id="spinAgainBtn" type="button" class="btn btn-secondary">🎡 Putar Lagi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Aturan Main -->
+  <div id="rulesModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="rulesModalTitle">
+    <div class="modal-card modal-sm">
+      <button id="closeRulesBtn" class="modal-close" type="button" aria-label="Tutup">✕</button>
+      <h2 id="rulesModalTitle">📖 Aturan Main SpeakWheel</h2>
+
+      <div class="rules-content">
+        <div class="rules-block">
+          <h3>🎙️ Mode Solo (Latihan Mandiri)</h3>
+          <ol>
+            <li>Pilih kategori topik atau paket cepat, lalu tekan <strong>SPIN</strong> (atau <kbd>Spasi</kbd>).</li>
+            <li>Saat topik keluar, gunakan <strong>Persiapan (15–30 dtk)</strong> untuk mencatat 2–3 poin kunci.</li>
+            <li>Begitu masuk <strong>Waktu Bicara</strong>, aktifkan <strong>Rekam Suara</strong> dan sampaikan gagasanmu sesuai pola bicara &amp; <em>Rule Tantangan</em>.</li>
+            <li>Putar ulang rekamanmu lalu isi <strong>Self-Check Evaluasi</strong>.</li>
+          </ol>
+        </div>
+
+        <div class="rules-block">
+          <h3>👥 Mode Grup / Tongkrongan</h3>
+          <ol>
+            <li>Aktifkan <strong>"Hapus topik setelah terpilih"</strong> agar setiap pemain mendapat topik berbeda.</li>
+            <li>Setiap pemain memutar roda secara bergiliran dan wajib memenuhi <strong>Kata Kunci Wajib</strong> + <strong>Rule Tantangan</strong>.</li>
+            <li>Pemain lain memberi skor (1–5) berdasarkan kejelasan, kreativitas, dan ketepatan waktu!</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: flex-end;">
+        <button id="closeRulesFooterBtn" type="button" class="btn btn-primary">Siap Main!</button>
       </div>
     </div>
   </div>

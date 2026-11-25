@@ -126,6 +126,21 @@ const CHALLENGE_KEYWORDS = [
   "Pintu", "Awan", "Gema", "Peta", "Baterai", "Bintang"
 ];
 
+const SPEAKING_RULES = [
+  "Dilarang memakai filler words ('eee', 'anu', 'kayak', 'gitu') selama bicara.",
+  "Gunakan gaya penyampaian seperti pembicara TED Talk yang tenang dan meyakinkan.",
+  "Wajib menyisipkan 1 contoh cerita nyata atau pengalaman pribadi.",
+  "Tutup jawabanmu dengan 1 pertanyaan reflektif untuk audiens.",
+  "Gunakan 1 analogi atau perumpamaan sederhana agar mudah dibayangkan.",
+  "Tidak boleh melihat catatan sama sekali saat timer bicara dimulai.",
+  "Awali 5 detik pertama dengan pernyataan yang mengejutkan atau pertanyaan pancingan.",
+  "Bicara dengan tempo lebih lambat dan beri jeda 1 detik di setiap poin penting.",
+  "Sertakan unsur humor ringan atau kalimat yang bikin pendengar tersenyum.",
+  "Bayangkan kamu sedang menjelaskan topik ini kepada anak usia 10 tahun.",
+  "Gunakan bahasa tubuh/ekspresi wajah yang antusias selama berbicara.",
+  "Akhiri dengan ajakan bertindak (call-to-action) yang jelas dalam 1 kalimat."
+];
+
 const FRAMEWORKS = [
   {
     name: "PREP",
@@ -203,6 +218,12 @@ const shuffleListBtn = document.getElementById("shuffleListBtn");
 const clearListBtn = document.getElementById("clearListBtn");
 const removeAfterSpinToggle = document.getElementById("removeAfterSpinToggle");
 const keywordChallengeToggle = document.getElementById("keywordChallengeToggle");
+const ruleChallengeToggle = document.getElementById("ruleChallengeToggle");
+
+const rulesBtn = document.getElementById("rulesBtn");
+const rulesModal = document.getElementById("rulesModal");
+const closeRulesBtn = document.getElementById("closeRulesBtn");
+const closeRulesFooterBtn = document.getElementById("closeRulesFooterBtn");
 
 const soundToggleBtn = document.getElementById("soundToggleBtn");
 const soundIcon = document.getElementById("soundIcon");
@@ -224,6 +245,8 @@ const modalFrameworkBadge = document.getElementById("modalFrameworkBadge");
 const modalTopicTitle = document.getElementById("modalTopicTitle");
 const keywordBox = document.getElementById("keywordBox");
 const modalKeyword = document.getElementById("modalKeyword");
+const ruleBox = document.getElementById("ruleBox");
+const modalRule = document.getElementById("modalRule");
 const modalPromptHint = document.getElementById("modalPromptHint");
 const prepNotesInput = document.getElementById("prepNotesInput");
 const removeWinnerBtn = document.getElementById("removeWinnerBtn");
@@ -683,6 +706,14 @@ function openResultModal(topic) {
     keywordBox.classList.add("hidden");
   }
 
+  if (ruleChallengeToggle.checked) {
+    const rule = SPEAKING_RULES[Math.floor(Math.random() * SPEAKING_RULES.length)];
+    modalRule.textContent = rule;
+    ruleBox.classList.remove("hidden");
+  } else {
+    ruleBox.classList.add("hidden");
+  }
+
   prepNotesInput.value = "";
   evalChecks.forEach((chk) => { chk.checked = false; });
   resetRecorderUI();
@@ -1043,6 +1074,13 @@ timerStartBtn.addEventListener("click", toggleTimer);
 timerResetBtn.addEventListener("click", resetTimer);
 recordBtn.addEventListener("click", toggleRecording);
 
+rulesBtn.addEventListener("click", () => rulesModal.classList.remove("hidden"));
+closeRulesBtn.addEventListener("click", () => rulesModal.classList.add("hidden"));
+closeRulesFooterBtn.addEventListener("click", () => rulesModal.classList.add("hidden"));
+rulesModal.addEventListener("click", (e) => {
+  if (e.target === rulesModal) rulesModal.classList.add("hidden");
+});
+
 historyBtn.addEventListener("click", () => historyModal.classList.remove("hidden"));
 closeHistoryBtn.addEventListener("click", () => historyModal.classList.add("hidden"));
 closeHistoryFooterBtn.addEventListener("click", () => historyModal.classList.add("hidden"));
@@ -1060,13 +1098,18 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (!resultModal.classList.contains("hidden")) closeResultModal();
     if (!historyModal.classList.contains("hidden")) historyModal.classList.add("hidden");
+    if (!rulesModal.classList.contains("hidden")) rulesModal.classList.add("hidden");
     return;
   }
 
   if (e.code === "Space") {
     const tag = document.activeElement?.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON") return;
-    if (!resultModal.classList.contains("hidden") || !historyModal.classList.contains("hidden")) return;
+    if (
+      !resultModal.classList.contains("hidden") ||
+      !historyModal.classList.contains("hidden") ||
+      !rulesModal.classList.contains("hidden")
+    ) return;
 
     e.preventDefault();
     spinWheel();
