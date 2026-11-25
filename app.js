@@ -71,6 +71,20 @@ const TOPIC_BANK = [
   { text: "Tips menjaga fokus di tengah banyaknya notifikasi.", category: "Karier & Produktivitas" },
   { text: "Kerja tim vs kerja sendiri: mana yang lebih efektif bagimu?", category: "Karier & Produktivitas" },
   { text: "Bagaimana cara membangun kepercayaan diri dalam 30 detik pertama?", category: "Karier & Produktivitas" },
+
+  // Romance & Hubungan
+  { text: "Apakah jatuh cinta pada pandangan pertama itu nyata atau hanya ilusi?", category: "Romance & Hubungan" },
+  { text: "Love language mana yang paling penting dalam sebuah hubungan dan kenapa?", category: "Romance & Hubungan" },
+  { text: "LDR (hubungan jarak jauh): bisa berhasil atau cuma buang waktu?", category: "Romance & Hubungan" },
+  { text: "Satu 'green flag' yang menurutmu wajib ada pada pasangan.", category: "Romance & Hubungan" },
+  { text: "Bisakah mantan pacar tetap menjadi teman baik?", category: "Romance & Hubungan" },
+  { text: "Lebih penting kecocokan humor atau kesamaan visi hidup?", category: "Romance & Hubungan" },
+  { text: "Ide kencan pertama (first date) terbaik yang tidak klise.", category: "Romance & Hubungan" },
+  { text: "Kapan waktu yang tepat untuk mengungkapkan perasaan lebih dulu?", category: "Romance & Hubungan" },
+  { text: "Kenapa komunikasi sering gagal saat pasangan sedang bertengkar?", category: "Romance & Hubungan" },
+  { text: "Apakah orang yang tepat datang di waktu yang salah itu benar ada?", category: "Romance & Hubungan" },
+  { text: "Tindakan romantis sederhana yang jauh lebih bermakna dari hadiah mahal.", category: "Romance & Hubungan" },
+  { text: "Haruskah pasangan tahu semua password media sosial satu sama lain?", category: "Romance & Hubungan" },
 ];
 
 const CHALLENGE_KEYWORDS = [
